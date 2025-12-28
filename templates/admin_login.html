@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login - Spin & Win</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #1e3c72 100%);
+            background-attachment: fixed;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .login-container {
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 249, 255, 0.98) 100%);
+            padding: 45px 40px;
+            border-radius: 25px;
+            box-shadow: 
+                0 20px 60px rgba(30, 60, 114, 0.4),
+                0 10px 30px rgba(42, 82, 152, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.9);
+            width: 100%;
+            max-width: 420px;
+            border: 2px solid rgba(255, 255, 255, 0.6);
+            position: relative;
+            overflow: hidden;
+        }
+        .login-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #667eea 100%);
+            background-size: 200% 100%;
+            animation: shimmer 3s infinite;
+        }
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        .login-header {
+            text-align: center;
+            margin-bottom: 35px;
+            position: relative;
+            z-index: 1;
+        }
+        .login-icon {
+            font-size: 3.5em;
+            margin-bottom: 15px;
+            filter: drop-shadow(0 4px 8px rgba(30, 60, 114, 0.2));
+        }
+        .login-header h1 {
+            color: #1e3c72;
+            font-size: 2em;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+        .login-subtitle {
+            color: #666;
+            font-size: 0.95em;
+            font-weight: 500;
+        }
+        .form-group {
+            margin-bottom: 22px;
+            position: relative;
+            z-index: 1;
+        }
+        .form-group label {
+            display: block;
+            color: #1e3c72;
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 14px 18px;
+            border: 2px solid #2a5298;
+            border-radius: 12px;
+            font-size: 1em;
+            outline: none;
+            transition: all 0.3s ease;
+            background: white;
+            box-shadow: 0 2px 8px rgba(30, 60, 114, 0.1);
+        }
+        .form-group input:focus {
+            border-color: #1e3c72;
+            box-shadow: 0 0 0 4px rgba(42, 82, 152, 0.1), 0 4px 12px rgba(30, 60, 114, 0.15);
+        }
+        .login-btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 25px rgba(30, 60, 114, 0.4);
+            margin-top: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 35px rgba(30, 60, 114, 0.5);
+        }
+        .login-btn:active {
+            transform: translateY(0);
+        }
+        .error-message {
+            margin-top: 15px;
+            padding: 12px;
+            background: rgba(236, 112, 99, 0.1);
+            color: #EC7063;
+            border: 1px solid rgba(236, 112, 99, 0.3);
+            border-radius: 10px;
+            font-size: 0.9em;
+            font-weight: 600;
+            text-align: center;
+            display: none;
+        }
+        .error-message.show {
+            display: block;
+        }
+        @media (max-width: 768px) {
+            .login-container {
+                padding: 35px 25px;
+            }
+            .login-icon {
+                font-size: 3em;
+            }
+            .login-header h1 {
+                font-size: 1.7em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <div class="login-icon">🔐</div>
+            <h1>Admin Login</h1>
+            <p class="login-subtitle">Enter credentials to access admin panel</p>
+        </div>
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="adminId">Admin ID</label>
+                <input type="text" id="adminId" name="adminId" placeholder="Enter Admin ID" required autocomplete="username">
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" placeholder="Enter Password" required autocomplete="current-password">
+            </div>
+            <button type="submit" class="login-btn">Login</button>
+            <div id="errorMessage" class="error-message"></div>
+        </form>
+    </div>
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const adminId = document.getElementById('adminId').value.trim();
+            const password = document.getElementById('password').value;
+            const errorMsg = document.getElementById('errorMessage');
+            
+            if (!adminId || !password) {
+                errorMsg.textContent = 'Please enter both Admin ID and Password';
+                errorMsg.classList.add('show');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/admin/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ admin_id: adminId, password: password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    window.location.href = '/admin';
+                } else {
+                    errorMsg.textContent = data.message || 'Invalid credentials';
+                    errorMsg.classList.add('show');
+                }
+            } catch (error) {
+                errorMsg.textContent = 'An error occurred. Please try again.';
+                errorMsg.classList.add('show');
+            }
+        });
+    </script>
+</body>
+</html>
+

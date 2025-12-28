@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Spin & Win</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #1e3c72 100%);
+            background-attachment: fixed;
+            padding: 15px;
+            height: 100vh;
+            overflow: hidden;
+            margin: 0;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            height: calc(100vh - 30px);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 18px;
+            position: relative;
+            flex-shrink: 0;
+        }
+        .logout-btn {
+            position: absolute;
+            top: 0;
+            right: 0;
+            padding: 8px 18px;
+            background: linear-gradient(135deg, #EC7063 0%, #C0392B 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.85em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(236, 112, 99, 0.35);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .logout-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(236, 112, 99, 0.45);
+        }
+        .logout-btn:active {
+            transform: translateY(0);
+        }
+
+        h1 {
+            color: white;
+            font-size: 2.2em;
+            font-weight: 800;
+            text-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+            margin-bottom: 5px;
+            letter-spacing: -0.5px;
+        }
+
+        .header-subtitle {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.9em;
+            font-weight: 400;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 12px;
+            margin-bottom: 18px;
+            flex-shrink: 0;
+        }
+
+        .stat-card {
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.98) 0%, rgba(245, 247, 250, 0.98) 100%);
+            padding: 16px 12px;
+            border-radius: 14px;
+            box-shadow:
+                0 6px 20px rgba(30, 60, 114, 0.25),
+                0 2px 8px rgba(42, 82, 152, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.8);
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #667eea 100%);
+            background-size: 200% 100%;
+            animation: shimmer 3s infinite;
+        }
+
+        @keyframes shimmer {
+            0% {
+                background-position: -200% 0;
+            }
+
+            100% {
+                background-position: 200% 0;
+            }
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px) scale(1.02);
+            box-shadow:
+                0 10px 30px rgba(30, 60, 114, 0.35),
+                0 4px 12px rgba(42, 82, 152, 0.25),
+                inset 0 1px 0 rgba(255, 255, 255, 0.9);
+        }
+
+        .stat-card h3 {
+            color: #1e3c72;
+            font-size: 0.75em;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.8px;
+            opacity: 0.85;
+        }
+
+        .stat-card .value {
+            font-size: 1.8em;
+            font-weight: 800;
+            background: linear-gradient(135deg, #2a5298 0%, #667eea 50%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.1;
+        }
+
+        .section {
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 249, 255, 0.98) 100%);
+            padding: 18px;
+            border-radius: 16px;
+            box-shadow:
+                0 8px 25px rgba(30, 60, 114, 0.2),
+                0 3px 10px rgba(42, 82, 152, 0.12);
+            margin-bottom: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            flex-shrink: 0;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .section h2 {
+            color: #1e3c72;
+            font-size: 1.2em;
+            font-weight: 800;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #2a5298;
+            margin: 0;
+            flex: 1;
+        }
+
+        .data-boxes-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 0;
+            flex: 1;
+            min-height: 0;
+            align-content: start;
+        }
+
+        .data-box {
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 249, 255, 0.98) 100%);
+            padding: 20px 18px;
+            border-radius: 16px;
+            box-shadow:
+                0 8px 25px rgba(30, 60, 114, 0.2),
+                0 3px 10px rgba(42, 82, 152, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .data-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #667eea 100%);
+            background-size: 200% 100%;
+            animation: shimmer 3s infinite;
+        }
+
+        .data-box:hover {
+            transform: translateY(-4px) scale(1.02);
+            box-shadow:
+                0 12px 35px rgba(30, 60, 114, 0.3),
+                0 5px 15px rgba(42, 82, 152, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.9);
+        }
+
+        .data-box-icon {
+            font-size: 2.2em;
+            margin-bottom: 10px;
+        }
+
+        .data-box h2 {
+            color: #1e3c72;
+            font-size: 1.2em;
+            font-weight: 800;
+            margin-bottom: 10px;
+            border: none;
+            padding: 0;
+        }
+
+        .data-box p {
+            color: #666;
+            font-size: 0.85em;
+            margin-bottom: 14px;
+            line-height: 1.5;
+        }
+
+        .view-all-btn {
+            padding: 8px 20px;
+            background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85em;
+            transition: all 0.3s ease;
+            box-shadow: 0 3px 12px rgba(30, 60, 114, 0.3);
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .view-all-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 16px rgba(30, 60, 114, 0.4);
+        }
+
+        .action-section {
+            display: grid;
+            grid-template-columns: 1fr 280px;
+            gap: 18px;
+            align-items: start;
+        }
+
+        .action-group {
+            flex: 1;
+        }
+
+        .action-group h2 {
+            margin-bottom: 12px;
+            font-size: 1.1em;
+        }
+
+        .action-input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .action-input {
+            flex: 1;
+            padding: 10px 14px;
+            border: 2px solid #2a5298;
+            border-radius: 10px;
+            font-size: 0.9em;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        .action-input:focus {
+            border-color: #1e3c72;
+            box-shadow: 0 0 0 3px rgba(42, 82, 152, 0.1);
+        }
+
+        .btn-primary {
+            padding: 10px 24px;
+            background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(30, 60, 114, 0.3);
+            white-space: nowrap;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(30, 60, 114, 0.4);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .clear-data-group {
+            background: linear-gradient(145deg, rgba(255, 245, 245, 0.95) 0%, rgba(255, 240, 240, 0.95) 100%);
+            padding: 16px;
+            border-radius: 14px;
+            border: 2px solid rgba(236, 112, 99, 0.3);
+            text-align: center;
+        }
+
+        .clear-data-group h2 {
+            color: #EC7063;
+            margin-bottom: 8px;
+            font-size: 1.05em;
+            border: none;
+            padding: 0;
+        }
+
+        .clear-data-group p {
+            margin-bottom: 12px;
+            color: #666;
+            font-size: 0.8em;
+            line-height: 1.4;
+        }
+
+        .btn-danger {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #EC7063 0%, #C0392B 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85em;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(236, 112, 99, 0.3);
+            width: 100%;
+        }
+
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(236, 112, 99, 0.4);
+        }
+
+        .btn-danger:active {
+            transform: translateY(0);
+        }
+
+        .status-message {
+            margin-top: 10px;
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+
+        .status-success {
+            background: rgba(82, 190, 128, 0.1);
+            color: #52BE80;
+            border: 1px solid rgba(82, 190, 128, 0.3);
+        }
+
+        .status-error {
+            background: rgba(236, 112, 99, 0.1);
+            color: #EC7063;
+            border: 1px solid rgba(236, 112, 99, 0.3);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            background: white;
+            border-radius: 14px;
+            overflow: hidden;
+        }
+
+        th,
+        td {
+            padding: 16px;
+            text-align: left;
+            border-bottom: 1px solid #e8e8e8;
+        }
+
+        th {
+            background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%);
+            color: white;
+            font-weight: 600;
+            font-size: 0.95em;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        tr:hover {
+            background: rgba(42, 82, 152, 0.05);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .user-id {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #666;
+            background: rgba(42, 82, 152, 0.05);
+            padding: 5px 10px;
+            border-radius: 6px;
+        }
+
+        .prize {
+            font-weight: 700;
+            color: #52BE80;
+            font-size: 1.1em;
+        }
+
+        .no-upi {
+            color: #999;
+            font-style: italic;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .badge-success {
+            background: rgba(82, 190, 128, 0.15);
+            color: #52BE80;
+        }
+
+        .badge-danger {
+            background: rgba(236, 112, 99, 0.15);
+            color: #EC7063;
+        }
+
+        @media (max-width: 1400px) {
+            .stats-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            .data-boxes-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .stats-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            .action-section {
+                grid-template-columns: 1fr;
+            }
+            .clear-data-group {
+                min-width: auto;
+            }
+            .data-boxes-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+            }
+            .stat-card {
+                padding: 12px 10px;
+            }
+            .stat-card .value {
+                font-size: 1.5em;
+            }
+            .stat-card h3 {
+                font-size: 0.7em;
+            }
+            .data-boxes-grid {
+                grid-template-columns: 1fr;
+            }
+            .logout-btn {
+                position: static;
+                display: block;
+                margin: 10px auto 0;
+                width: fit-content;
+            }
+            h1 {
+                font-size: 1.8em;
+            }
+            .header-subtitle {
+                font-size: 0.85em;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <a href="/admin/logout" class="logout-btn">🚪 Logout</a>
+            <h1>🔐 Admin Panel</h1>
+            <p class="header-subtitle">Manage Orders, Users & Spin Data</p>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Total Spins</h3>
+                <div class="value">{{ total_spins }}</div>
+            </div>
+            <div class="stat-card">
+                <h3>Total Users</h3>
+                <div class="value">{{ total_users }}</div>
+            </div>
+            <div class="stat-card">
+                <h3>Total Amount</h3>
+                <div class="value">₹{{ total_amount }}</div>
+            </div>
+            <div class="stat-card">
+                <h3>UPI Submitted</h3>
+                <div class="value">{{ upi_submitted }}</div>
+            </div>
+            <div class="stat-card">
+                <h3>Total Orders</h3>
+                <div class="value">{{ total_orders }}</div>
+            </div>
+            <div class="stat-card">
+                <h3>Available Orders</h3>
+                <div class="value">{{ available_orders }}</div>
+            </div>
+        </div>
+
+        <!-- Action Section - Add Order ID and Clear Data -->
+        <div class="section">
+            <div class="action-section">
+                <div class="action-group">
+                    <h2>📝 Add Order ID</h2>
+                    <div class="action-input-group">
+                        <input type="text" id="orderIdInput" class="action-input"
+                            placeholder="Enter Order ID (e.g., ORDER123)">
+                        <button id="addOrderBtn" class="btn-primary">Add Order ID</button>
+                    </div>
+                    <p id="orderStatus" class="status-message"></p>
+                </div>
+
+                <div class="clear-data-group">
+                    <h2>🗑️ Clear All Data</h2>
+                    <p>Permanently delete all data. This cannot be undone!</p>
+                    <button id="clearDataBtn" class="btn-danger">Clear All Data</button>
+                    <p id="clearStatus" class="status-message"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Boxes Grid -->
+        <div class="section" style="flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 18px;">
+            <div class="data-boxes-grid">
+            <!-- Orders Box -->
+            <div class="data-box">
+                <div class="data-box-icon">📦</div>
+                <h2>All Orders</h2>
+                <p>View and manage all order IDs</p>
+                <a href="/admin/orders" class="view-all-btn">View All →</a>
+            </div>
+
+            <!-- User Statistics Box -->
+            <div class="data-box">
+                <div class="data-box-icon">👥</div>
+                <h2>User Statistics</h2>
+                <p>View detailed user statistics and data</p>
+                <a href="/admin/users" class="view-all-btn">View All →</a>
+            </div>
+
+            <!-- Spins History Box -->
+            <div class="data-box">
+                <div class="data-box-icon">🎯</div>
+                <h2>All Spins History</h2>
+                <p>View complete spins history and records</p>
+                <a href="/admin/spins" class="view-all-btn">View All →</a>
+            </div>
+        </div>
+        </div>
+    </div>
+
+    <script>
+        // Add Order ID functionality
+        document.getElementById('addOrderBtn').addEventListener('click', async () => {
+            const orderInput = document.getElementById('orderIdInput');
+            const orderStatus = document.getElementById('orderStatus');
+            const addBtn = document.getElementById('addOrderBtn');
+
+            const orderId = orderInput.value.trim().toUpperCase();
+
+            if (!orderId) {
+                orderStatus.textContent = 'Please enter an order ID';
+                orderStatus.className = 'status-message status-error';
+                return;
+            }
+
+            if (orderId.length < 4 || orderId.length > 20) {
+                orderStatus.textContent = 'Order ID must be 4-20 characters';
+                orderStatus.className = 'status-message status-error';
+                return;
+            }
+
+            addBtn.disabled = true;
+            addBtn.textContent = 'Adding...';
+            orderStatus.textContent = '';
+            orderStatus.className = 'status-message';
+
+            try {
+                const response = await fetch('/add-order', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ order_id: orderId })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    orderStatus.textContent = data.message;
+                    orderStatus.className = 'status-message status-success';
+                    orderInput.value = '';
+                    // Reload page after 1 second to show new order
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    orderStatus.textContent = data.message || 'Error adding order ID';
+                    orderStatus.className = 'status-message status-error';
+                    addBtn.disabled = false;
+                    addBtn.textContent = 'Add Order ID';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                orderStatus.textContent = 'An error occurred. Please try again.';
+                orderStatus.className = 'status-message status-error';
+                addBtn.disabled = false;
+                addBtn.textContent = 'Add Order ID';
+            }
+        });
+
+        // Allow Enter key to add order
+        document.getElementById('orderIdInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('addOrderBtn').click();
+            }
+        });
+
+        // Clear All Data functionality
+        document.getElementById('clearDataBtn').addEventListener('click', async () => {
+            const clearBtn = document.getElementById('clearDataBtn');
+            const clearStatus = document.getElementById('clearStatus');
+
+            // Confirm before clearing
+            const confirmed = confirm('⚠️ WARNING: This will permanently delete ALL data including:\n\n• All spins\n• All user data\n• All orders\n• All UPI IDs\n\nThis action CANNOT be undone!\n\nAre you sure you want to continue?');
+
+            if (!confirmed) {
+                return;
+            }
+
+            // Double confirmation
+            const doubleConfirm = confirm('Are you absolutely sure? This will delete EVERYTHING!');
+
+            if (!doubleConfirm) {
+                return;
+            }
+
+            clearBtn.disabled = true;
+            clearBtn.textContent = 'Clearing...';
+            clearStatus.textContent = '';
+            clearStatus.className = 'status-message';
+
+            try {
+                const response = await fetch('/clear-all-data', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    clearStatus.textContent = data.message + ' Page will reload...';
+                    clearStatus.className = 'status-message status-success';
+                    // Reload page after 2 seconds
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    clearStatus.textContent = data.message || 'Error clearing data';
+                    clearStatus.className = 'status-message status-error';
+                    clearBtn.disabled = false;
+                    clearBtn.textContent = 'Clear All Data';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                clearStatus.textContent = 'An error occurred. Please try again.';
+                clearStatus.className = 'status-message status-error';
+                clearBtn.disabled = false;
+                clearBtn.textContent = 'Clear All Data';
+            }
+        });
+    </script>
+</body>
+
+</html>
