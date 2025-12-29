@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, jsonify, session, redirect
 from functools import wraps
 import sqlite3
+import os 
 import random
 import hashlib
 import os
@@ -22,6 +23,8 @@ def admin_required(f):
             return redirect('/manage/admin/login')
         return f(*args, **kwargs)
     return decorated_function
+
+DATABASE_URL = os.environ.get("DATABASE_URL")
 
 # Database setup - Support both SQLite (local) and PostgreSQL (Vercel)
 DATABASE_URL = os.environ.get('DATABASE_URL')
@@ -690,3 +693,15 @@ def clear_all_data():
 if __name__ == '__main__':
     init_db()
     app.run(debug=True, host='0.0.0.0', port=5001)
+
+
+@app.route("/check")
+def check_env():
+    return {
+        "msg": "Env test",
+        "DATABASE_URL": DATABASE_URL or "NOT FOUND"
+    }
+
+
+from flask import Flask
+app = Flask(__name__)
