@@ -5,6 +5,7 @@ import random
 import hashlib
 import os
 from datetime import datetime
+from urllib.parse import urlparse
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)  # Change this in production
@@ -22,39 +23,102 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# Database setup
-DB_NAME = 'spin_wheel.db'
+# Database setup - Support both SQLite (local) and PostgreSQL (Vercel)
+DATABASE_URL = os.environ.get('DATABASE_URL')
+USE_POSTGRES = bool(DATABASE_URL)
+
+def get_db_connection():
+    """Get database connection - PostgreSQL on Vercel, SQLite locally"""
+    if USE_POSTGRES:
+        import psycopg2
+        # Parse DATABASE_URL (format: postgres://user:pass@host:port/dbname)
+        # Handle both postgres:// and postgresql://
+        db_url = DATABASE_URL
+        if db_url.startswith('postgres://'):
+            db_url = db_url.replace('postgres://', 'postgresql://', 1)
+        
+        result = urlparse(db_url)
+        conn = psycopg2.connect(
+            database=result.path[1:],  # Remove leading /
+            user=result.username,
+            password=result.password,
+            host=result.hostname,
+            port=result.port,
+            sslmode='require'  # SSL required for cloud databases
+        )
+        return conn
+    else:
+        return sqlite3.connect('spin_wheel.db')
+
+def get_cursor(conn):
+    """Get cursor with proper row factory for SQLite"""
+    if USE_POSTGRES:
+        return conn.cursor()
+    else:
+        conn.row_factory = sqlite3.Row
+        return conn.cursor()
 
 def init_db():
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS spins
-                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                  user_id TEXT NOT NULL,
-                  prize INTEGER NOT NULL,
-                  timestamp TEXT NOT NULL,
-                  ip_address TEXT,
-                  upi_id TEXT,
-                  order_id TEXT)''')
+    """Initialize database tables"""
+    conn = get_db_connection()
+    c = get_cursor(conn)
     
-    # Create orders table for order ID management
-    c.execute('''CREATE TABLE IF NOT EXISTS orders
-                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                  order_id TEXT UNIQUE NOT NULL,
-                  user_id TEXT,
-                  created_at TEXT NOT NULL,
-                  used_at TEXT,
-                  is_used INTEGER DEFAULT 0)''')
-    
-    # Add columns if they don't exist (for existing databases)
-    try:
-        c.execute("ALTER TABLE spins ADD COLUMN upi_id TEXT")
-    except sqlite3.OperationalError:
-        pass  # Column already exists
-    try:
-        c.execute("ALTER TABLE spins ADD COLUMN order_id TEXT")
-    except sqlite3.OperationalError:
-        pass  # Column already exists
+    if USE_POSTGRES:
+        # PostgreSQL syntax
+        c.execute('''CREATE TABLE IF NOT EXISTS spins
+                     (id SERIAL PRIMARY KEY,
+                      user_id VARCHAR(255) NOT NULL,
+                      prize INTEGER NOT NULL,
+                      timestamp VARCHAR(255) NOT NULL,
+                      ip_address VARCHAR(255),
+                      upi_id TEXT,
+                      order_id TEXT)''')
+        
+        c.execute('''CREATE TABLE IF NOT EXISTS orders
+                     (id SERIAL PRIMARY KEY,
+                      order_id VARCHAR(255) UNIQUE NOT NULL,
+                      user_id VARCHAR(255),
+                      created_at VARCHAR(255) NOT NULL,
+                      used_at VARCHAR(255),
+                      is_used INTEGER DEFAULT 0)''')
+        
+        # Add columns if they don't exist (PostgreSQL)
+        try:
+            c.execute("ALTER TABLE spins ADD COLUMN upi_id TEXT")
+        except Exception:
+            pass
+        try:
+            c.execute("ALTER TABLE spins ADD COLUMN order_id TEXT")
+        except Exception:
+            pass
+    else:
+        # SQLite syntax
+        c.execute('''CREATE TABLE IF NOT EXISTS spins
+                     (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                      user_id TEXT NOT NULL,
+                      prize INTEGER NOT NULL,
+                      timestamp TEXT NOT NULL,
+                      ip_address TEXT,
+                      upi_id TEXT,
+                      order_id TEXT)''')
+        
+        c.execute('''CREATE TABLE IF NOT EXISTS orders
+                     (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                      order_id TEXT UNIQUE NOT NULL,
+                      user_id TEXT,
+                      created_at TEXT NOT NULL,
+                      used_at TEXT,
+                      is_used INTEGER DEFAULT 0)''')
+        
+        # Add columns if they don't exist (SQLite)
+        try:
+            c.execute("ALTER TABLE spins ADD COLUMN upi_id TEXT")
+        except sqlite3.OperationalError:
+            pass
+        try:
+            c.execute("ALTER TABLE spins ADD COLUMN order_id TEXT")
+        except sqlite3.OperationalError:
+            pass
     
     conn.commit()
     conn.close()
@@ -93,12 +157,12 @@ def get_user_id():
 
 def has_user_spun(user_id, order_id=None):
     """Check if user has already spun (without order ID)"""
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
+    conn = get_db_connection()
+    c = get_cursor(conn)
     
     # If order_id is provided, check if it's valid and unused
     if order_id:
-        c.execute("SELECT is_used FROM orders WHERE order_id = ?", (order_id,))
+        c.execute("SELECT is_used FROM orders WHERE order_id = %s" if USE_POSTGRES else "SELECT is_used FROM orders WHERE order_id = ?", (order_id,))
         order = c.fetchone()
         if order and order[0] == 0:  # Order exists and is unused
             conn.close()
@@ -108,7 +172,7 @@ def has_user_spun(user_id, order_id=None):
             return True  # Already used this order
     
     # Check regular spins (without order ID)
-    c.execute("SELECT COUNT(*) FROM spins WHERE user_id = ? AND (order_id IS NULL OR order_id = '')", (user_id,))
+    c.execute("SELECT COUNT(*) FROM spins WHERE user_id = %s AND (order_id IS NULL OR order_id = '')" if USE_POSTGRES else "SELECT COUNT(*) FROM spins WHERE user_id = ? AND (order_id IS NULL OR order_id = '')", (user_id,))
     count = c.fetchone()[0]
     conn.close()
     return count > 0
@@ -125,20 +189,30 @@ def select_prize():
 
 def record_spin(user_id, prize, order_id=None):
     """Record spin in database"""
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
+    conn = get_db_connection()
+    c = get_cursor(conn)
     timestamp = datetime.now().isoformat()
     ip_address = request.remote_addr
     
     # If order_id provided, mark it as used
     if order_id:
-        c.execute("UPDATE orders SET is_used = 1, user_id = ?, used_at = ? WHERE order_id = ?",
-                  (user_id, timestamp, order_id))
-        c.execute("INSERT INTO spins (user_id, prize, timestamp, ip_address, order_id) VALUES (?, ?, ?, ?, ?)",
-                  (user_id, prize, timestamp, ip_address, order_id))
+        if USE_POSTGRES:
+            c.execute("UPDATE orders SET is_used = 1, user_id = %s, used_at = %s WHERE order_id = %s",
+                      (user_id, timestamp, order_id))
+            c.execute("INSERT INTO spins (user_id, prize, timestamp, ip_address, order_id) VALUES (%s, %s, %s, %s, %s)",
+                      (user_id, prize, timestamp, ip_address, order_id))
+        else:
+            c.execute("UPDATE orders SET is_used = 1, user_id = ?, used_at = ? WHERE order_id = ?",
+                      (user_id, timestamp, order_id))
+            c.execute("INSERT INTO spins (user_id, prize, timestamp, ip_address, order_id) VALUES (?, ?, ?, ?, ?)",
+                      (user_id, prize, timestamp, ip_address, order_id))
     else:
-        c.execute("INSERT INTO spins (user_id, prize, timestamp, ip_address) VALUES (?, ?, ?, ?)",
-                  (user_id, prize, timestamp, ip_address))
+        if USE_POSTGRES:
+            c.execute("INSERT INTO spins (user_id, prize, timestamp, ip_address) VALUES (%s, %s, %s, %s)",
+                      (user_id, prize, timestamp, ip_address))
+        else:
+            c.execute("INSERT INTO spins (user_id, prize, timestamp, ip_address) VALUES (?, ?, ?, ?)",
+                      (user_id, prize, timestamp, ip_address))
     
     conn.commit()
     conn.close()
@@ -159,9 +233,9 @@ def validate_order():
             'message': 'Please enter an order ID'
         }), 400
     
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    c.execute("SELECT is_used FROM orders WHERE order_id = ?", (order_id,))
+    conn = get_db_connection()
+    c = get_cursor(conn)
+    c.execute("SELECT is_used FROM orders WHERE order_id = %s" if USE_POSTGRES else "SELECT is_used FROM orders WHERE order_id = ?", (order_id,))
     order = c.fetchone()
     conn.close()
     
@@ -198,9 +272,9 @@ def spin():
         }), 400
     
     # Validate order ID exists in database
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    c.execute("SELECT is_used FROM orders WHERE order_id = ?", (order_id,))
+    conn = get_db_connection()
+    c = get_cursor(conn)
+    c.execute("SELECT is_used FROM orders WHERE order_id = %s" if USE_POSTGRES else "SELECT is_used FROM orders WHERE order_id = ?", (order_id,))
     order = c.fetchone()
     
     if not order:
@@ -241,9 +315,9 @@ def check_status():
     has_spun = has_user_spun(user_id)
     
     if has_spun:
-        conn = sqlite3.connect(DB_NAME)
-        c = conn.cursor()
-        c.execute("SELECT prize FROM spins WHERE user_id = ? ORDER BY timestamp DESC LIMIT 1", (user_id,))
+        conn = get_db_connection()
+        c = get_cursor(conn)
+        c.execute("SELECT prize FROM spins WHERE user_id = %s ORDER BY timestamp DESC LIMIT 1" if USE_POSTGRES else "SELECT prize FROM spins WHERE user_id = ? ORDER BY timestamp DESC LIMIT 1", (user_id,))
         result = c.fetchone()
         conn.close()
         prize = result[0] if result else None
@@ -325,12 +399,16 @@ def submit_upi():
             }), 400
         
         # Check database
-        conn = sqlite3.connect(DB_NAME)
-        c = conn.cursor()
+        conn = get_db_connection()
+        c = get_cursor(conn)
         
         # Get the latest spin for this user
-        c.execute("SELECT id, upi_id FROM spins WHERE user_id = ? ORDER BY timestamp DESC LIMIT 1",
-                  (user_id,))
+        if USE_POSTGRES:
+            c.execute("SELECT id, upi_id FROM spins WHERE user_id = %s ORDER BY timestamp DESC LIMIT 1",
+                      (user_id,))
+        else:
+            c.execute("SELECT id, upi_id FROM spins WHERE user_id = ? ORDER BY timestamp DESC LIMIT 1",
+                      (user_id,))
         result = c.fetchone()
         
         if not result:
@@ -352,8 +430,12 @@ def submit_upi():
             }), 400
         
         # Update the latest spin with UPI ID
-        c.execute("UPDATE spins SET upi_id = ? WHERE id = ?",
-                  (upi_id, spin_id))
+        if USE_POSTGRES:
+            c.execute("UPDATE spins SET upi_id = %s WHERE id = %s",
+                      (upi_id, spin_id))
+        else:
+            c.execute("UPDATE spins SET upi_id = ? WHERE id = ?",
+                      (upi_id, spin_id))
         conn.commit()
         conn.close()
         
@@ -390,11 +472,14 @@ def add_order():
             'message': 'Order ID must be 4-20 characters (letters, numbers, dash, underscore only)'
         }), 400
     
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
+    conn = get_db_connection()
+    c = get_cursor(conn)
     
     # Check if order already exists
-    c.execute("SELECT id FROM orders WHERE order_id = ?", (order_id,))
+    if USE_POSTGRES:
+        c.execute("SELECT id FROM orders WHERE order_id = %s", (order_id,))
+    else:
+        c.execute("SELECT id FROM orders WHERE order_id = ?", (order_id,))
     if c.fetchone():
         conn.close()
         return jsonify({
@@ -405,8 +490,12 @@ def add_order():
     # Insert order
     timestamp = datetime.now().isoformat()
     try:
-        c.execute("INSERT INTO orders (order_id, created_at) VALUES (?, ?)",
-                  (order_id, timestamp))
+        if USE_POSTGRES:
+            c.execute("INSERT INTO orders (order_id, created_at) VALUES (%s, %s)",
+                      (order_id, timestamp))
+        else:
+            c.execute("INSERT INTO orders (order_id, created_at) VALUES (?, ?)",
+                      (order_id, timestamp))
         conn.commit()
         conn.close()
         
@@ -458,8 +547,8 @@ def admin_logout():
 @admin_required
 def admin():
     """Admin panel to view all spins and statistics"""
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
+    conn = get_db_connection()
+    c = get_cursor(conn)
     
     # Get limited spins with user info (last 10)
     c.execute('''SELECT user_id, prize, timestamp, ip_address, upi_id, order_id 
@@ -495,12 +584,20 @@ def admin():
     all_orders = c.fetchall()
     
     # Group by user (limited to last 10)
-    c.execute('''SELECT user_id, COUNT(*) as spin_count, SUM(prize) as total_prize, 
-                 MAX(timestamp) as last_spin, GROUP_CONCAT(DISTINCT upi_id) as upi_ids
-                 FROM spins 
-                 GROUP BY user_id 
-                 ORDER BY last_spin DESC
-                 LIMIT 10''')
+    if USE_POSTGRES:
+        c.execute('''SELECT user_id, COUNT(*) as spin_count, SUM(prize) as total_prize, 
+                     MAX(timestamp) as last_spin, STRING_AGG(DISTINCT upi_id, ',') as upi_ids
+                     FROM spins 
+                     GROUP BY user_id 
+                     ORDER BY last_spin DESC
+                     LIMIT 10''')
+    else:
+        c.execute('''SELECT user_id, COUNT(*) as spin_count, SUM(prize) as total_prize, 
+                     MAX(timestamp) as last_spin, GROUP_CONCAT(DISTINCT upi_id) as upi_ids
+                     FROM spins 
+                     GROUP BY user_id 
+                     ORDER BY last_spin DESC
+                     LIMIT 10''')
     user_stats = c.fetchall()
     
     conn.close()
@@ -521,8 +618,8 @@ def admin():
 @admin_required
 def admin_orders():
     """View all orders"""
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
+    conn = get_db_connection()
+    c = get_cursor(conn)
     c.execute('''SELECT order_id, user_id, created_at, used_at, is_used 
                  FROM orders ORDER BY created_at DESC''')
     all_orders = c.fetchall()
@@ -533,13 +630,20 @@ def admin_orders():
 @admin_required
 def admin_users():
     """View all user statistics"""
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    c.execute('''SELECT user_id, COUNT(*) as spin_count, SUM(prize) as total_prize, 
-                 MAX(timestamp) as last_spin, GROUP_CONCAT(DISTINCT upi_id) as upi_ids
-                 FROM spins 
-                 GROUP BY user_id 
-                 ORDER BY last_spin DESC''')
+    conn = get_db_connection()
+    c = get_cursor(conn)
+    if USE_POSTGRES:
+        c.execute('''SELECT user_id, COUNT(*) as spin_count, SUM(prize) as total_prize, 
+                     MAX(timestamp) as last_spin, STRING_AGG(DISTINCT upi_id, ',') as upi_ids
+                     FROM spins 
+                     GROUP BY user_id 
+                     ORDER BY last_spin DESC''')
+    else:
+        c.execute('''SELECT user_id, COUNT(*) as spin_count, SUM(prize) as total_prize, 
+                     MAX(timestamp) as last_spin, GROUP_CONCAT(DISTINCT upi_id) as upi_ids
+                     FROM spins 
+                     GROUP BY user_id 
+                     ORDER BY last_spin DESC''')
     user_stats = c.fetchall()
     conn.close()
     return render_template('admin_users.html', user_stats=user_stats)
@@ -548,8 +652,8 @@ def admin_users():
 @admin_required
 def admin_spins():
     """View all spins history"""
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
+    conn = get_db_connection()
+    c = get_cursor(conn)
     c.execute('''SELECT user_id, prize, timestamp, ip_address, upi_id, order_id 
                  FROM spins ORDER BY timestamp DESC''')
     spins = c.fetchall()
@@ -561,8 +665,8 @@ def admin_spins():
 def clear_all_data():
     """Clear all data from database (admin function)"""
     try:
-        conn = sqlite3.connect(DB_NAME)
-        c = conn.cursor()
+        conn = get_db_connection()
+        c = get_cursor(conn)
         
         # Delete all spins
         c.execute("DELETE FROM spins")
