@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spin Wheel - Win Prizes!</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <!-- Header -->
+            <div class="header">
+                <h1 class="title">🎰 Spin & Win</h1>
+                <p class="subtitle">Spin the wheel and win amazing prizes! 🎁</p>
+            </div>
+
+            <!-- Wheel Container -->
+            <div class="wheel-container">
+                <canvas id="wheelCanvas"></canvas>
+                <div class="pointer"></div>
+            </div>
+
+            <!-- Order ID Section -->
+            <div class="order-id-section">
+                <h3>Have an Order ID?</h3>
+                <p class="order-subtitle">Enter your order ID to spin (optional)</p>
+                <div class="order-input-wrapper">
+                    <input 
+                        type="text" 
+                        id="orderIdInput" 
+                        class="order-input" 
+                        placeholder="ENTER ORDER ID (E.G., ORDER12)"
+                        autocomplete="off"
+                    >
+                    <button id="validateOrderBtn" class="validate-order-btn">✓</button>
+                </div>
+                <p id="orderStatus" class="order-status"></p>
+            </div>
+
+            <!-- Spin Button -->
+            <button id="spinButton" class="spin-button">🎰 Spin the Wheel</button>
+
+            <!-- Rules Section -->
+            <div class="rules">
+                <h3>Rules:</h3>
+                <ul>
+                    <li>✓ One spin per user</li>
+                    <li>✓ Enter order ID to spin again</li>
+                    <li>✓ Prize shown instantly</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Result Modal -->
+    <div id="resultModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <div class="modal-body">
+                <div class="trophy">🏆</div>
+                <h2 id="resultTitle">Congratulations!</h2>
+                <p id="resultMessage" class="result-message"></p>
+            </div>
+            
+            <!-- UPI ID Form -->
+            <div id="upiForm" class="upi-form">
+                <h3>Enter Your UPI ID</h3>
+                <p class="upi-subtitle">We'll process your payment manually</p>
+                <input 
+                    type="text" 
+                    id="upiInput" 
+                    class="upi-input" 
+                    placeholder="yourname@paytm"
+                    autocomplete="off"
+                >
+                <button id="submitUpiBtn" class="submit-upi-btn">Submit UPI ID</button>
+                <p id="upiStatus" class="upi-status"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loader -->
+    <div id="loader" class="loader">
+        <div class="loader-spinner"></div>
+    </div>
+
+    <!-- Confetti Container -->
+    <div id="confetti-container"></div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
+

@@ -18,7 +18,7 @@ def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'admin_logged_in' not in session or not session['admin_logged_in']:
-            return redirect('/admin/login')
+            return redirect('/manage/admin/login')
         return f(*args, **kwargs)
     return decorated_function
 
@@ -63,15 +63,15 @@ def init_db():
 PRIZES = [1, 5, 10, 15, 20, 25, 30, 40, 50, 60, 75, 100]
 
 # Probability configuration (admin variable)
-# Users will only get ₹1-₹20 prizes
+# Users will only get ₹1-₹10 prizes
 # Format: {prize: probability_weight}
 PRIZE_PROBABILITIES = {
-    1: 20,    # Common
-    5: 20,    # Common
-    10: 18,   # Common
-    15: 18,   # Common
-    20: 15,   # Common
-    25: 0,    # Disabled - users only get ₹1-₹20
+    1: 25,    # Common
+    5: 25,    # Common
+    10: 20,   # Common
+    15: 0,    # Disabled - users only get ₹1-₹10
+    20: 0,    # Disabled
+    25: 0,    # Disabled
     30: 0,    # Jackpot - disabled for regular users
     40: 0,    # Disabled
     50: 0,    # Disabled
@@ -114,7 +114,7 @@ def has_user_spun(user_id, order_id=None):
     return count > 0
 
 def select_prize():
-    """Select prize based on probability weights - only ₹1-₹20 for regular users"""
+    """Select prize based on probability weights - only ₹1-₹10 for regular users"""
     # Filter out prizes with 0 weight (disabled prizes)
     available_prizes = [p for p, w in PRIZE_PROBABILITIES.items() if w > 0]
     available_weights = [PRIZE_PROBABILITIES[p] for p in available_prizes]
@@ -422,13 +422,13 @@ def add_order():
             'message': f'Error adding order ID: {str(e)}'
         }), 500
 
-@app.route('/admin/login', methods=['GET', 'POST'])
+@app.route('/manage/admin/login', methods=['GET', 'POST'])
 def admin_login():
     """Admin login page"""
     if request.method == 'GET':
         # If already logged in, redirect to admin
         if session.get('admin_logged_in'):
-            return redirect('/admin')
+            return redirect('/manage/admin')
         return render_template('admin_login.html')
     
     # Handle POST request
@@ -447,14 +447,14 @@ def admin_login():
     else:
         return jsonify({'success': False, 'message': 'Invalid Admin ID or Password'}), 401
 
-@app.route('/admin/logout')
+@app.route('/manage/admin/logout')
 def admin_logout():
     """Admin logout"""
     session.pop('admin_logged_in', None)
     session.pop('admin_id', None)
-    return redirect('/admin/login')
+    return redirect('/manage/admin/login')
 
-@app.route('/admin')
+@app.route('/manage/admin')
 @admin_required
 def admin():
     """Admin panel to view all spins and statistics"""
@@ -517,7 +517,7 @@ def admin():
                          available_orders=available_orders,
                          all_orders=all_orders)
 
-@app.route('/admin/orders')
+@app.route('/manage/admin/orders')
 @admin_required
 def admin_orders():
     """View all orders"""
@@ -529,7 +529,7 @@ def admin_orders():
     conn.close()
     return render_template('admin_orders.html', all_orders=all_orders)
 
-@app.route('/admin/users')
+@app.route('/manage/admin/users')
 @admin_required
 def admin_users():
     """View all user statistics"""
@@ -544,7 +544,7 @@ def admin_users():
     conn.close()
     return render_template('admin_users.html', user_stats=user_stats)
 
-@app.route('/admin/spins')
+@app.route('/manage/admin/spins')
 @admin_required
 def admin_spins():
     """View all spins history"""

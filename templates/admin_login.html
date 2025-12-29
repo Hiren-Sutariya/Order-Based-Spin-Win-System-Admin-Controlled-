@@ -185,7 +185,7 @@
             }
             
             try {
-                const response = await fetch('/admin/login', {
+                const response = await fetch('/manage/admin/login', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -196,7 +196,7 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    window.location.href = '/admin';
+                    window.location.href = '/manage/admin';
                 } else {
                     errorMsg.textContent = data.message || 'Invalid credentials';
                     errorMsg.classList.add('show');
